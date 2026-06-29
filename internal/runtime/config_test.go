@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"testing"
 
 	sudokucrypto "github.com/SUDOKU-ASCII/sudoku/pkg/crypto"
@@ -33,6 +34,63 @@ func TestBuildSudokuConfigRecoversPublicKey(t *testing.T) {
 	}
 	if cfg.LocalPort != 18080 {
 		t.Fatalf("unexpected port %d", cfg.LocalPort)
+	}
+}
+
+func TestBuildSudokuConfigAcceptsMetaCubeXFieldNames(t *testing.T) {
+	pair, err := sudokucrypto.GenerateMasterKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := []byte(`{
+		"master_private_key": "` + sudokucrypto.EncodeScalar(pair.Private) + `",
+		"aead-method": "aes-128-gcm",
+		"table-type": "up_ascii_down_entropy",
+		"padding-min": 2,
+		"padding-max": 7,
+		"custom-table": "xpxvvpvv",
+		"custom-tables": ["xpxvvpvv", "vxpvxvvp"],
+		"httpmask": {
+			"mode": "stream",
+			"tls": true,
+			"mask-host": "cdn.example.com",
+			"path-root": "aabbcc",
+			"multiplex": "auto"
+		},
+		"enable-pure-downlink": false
+	}`)
+	var settings panel.SudokuSettings
+	if err := json.Unmarshal(raw, &settings); err != nil {
+		t.Fatal(err)
+	}
+	node := &panel.NodeInfo{
+		Id:                 1,
+		Protocol:           "sudoku",
+		Host:               "example.com",
+		ServerPort:         18080,
+		EncryptionSettings: settings,
+	}
+	cfg, err := buildSudokuConfig(node, conf.New().RuntimeConfig)
+	if err != nil {
+		t.Fatalf("build config: %v", err)
+	}
+	if cfg.AEAD != "aes-128-gcm" {
+		t.Fatalf("AEAD = %q", cfg.AEAD)
+	}
+	if cfg.ASCII != "up_ascii_down_entropy" {
+		t.Fatalf("ASCII = %q", cfg.ASCII)
+	}
+	if cfg.PaddingMin != 2 || cfg.PaddingMax != 7 {
+		t.Fatalf("padding = %d/%d", cfg.PaddingMin, cfg.PaddingMax)
+	}
+	if cfg.CustomTable != "xpxvvpvv" || len(cfg.CustomTables) != 2 {
+		t.Fatalf("custom tables not propagated")
+	}
+	if cfg.HTTPMask.Mode != "stream" || !cfg.HTTPMask.TLS || cfg.HTTPMask.Host != "cdn.example.com" || cfg.HTTPMask.PathRoot != "aabbcc" || cfg.HTTPMask.Multiplex != "auto" {
+		t.Fatalf("httpmask not propagated: %+v", cfg.HTTPMask)
+	}
+	if cfg.EnablePureDownlink {
+		t.Fatalf("EnablePureDownlink should be false")
 	}
 }
 

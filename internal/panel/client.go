@@ -57,7 +57,9 @@ type SudokuSettings struct {
 	MasterPublicKey    string   `json:"master_public_key"`
 	MasterPrivateKey   string   `json:"master_private_key"`
 	AEAD               string   `json:"aead"`
+	AEADMethod         string   `json:"aead_method"`
 	ASCII              string   `json:"ascii"`
+	TableType          string   `json:"table_type"`
 	PaddingMin         int      `json:"padding_min"`
 	PaddingMax         int      `json:"padding_max"`
 	EnablePureDownlink *bool    `json:"enable_pure_downlink"`
@@ -71,9 +73,79 @@ type SudokuSettings struct {
 		Mode      string `json:"mode"`
 		TLS       *bool  `json:"tls"`
 		Host      string `json:"host"`
+		MaskHost  string `json:"mask_host"`
 		PathRoot  string `json:"path_root"`
 		Multiplex string `json:"multiplex"`
 	} `json:"httpmask"`
+}
+
+func (s *SudokuSettings) UnmarshalJSON(data []byte) error {
+	type rawHTTPMask struct {
+		Disable   *bool  `json:"disable"`
+		Mode      string `json:"mode"`
+		TLS       *bool  `json:"tls"`
+		Host      string `json:"host"`
+		MaskHost  string `json:"mask_host"`
+		MaskHostK string `json:"mask-host"`
+		PathRoot  string `json:"path_root"`
+		PathRootK string `json:"path-root"`
+		Multiplex string `json:"multiplex"`
+	}
+	type rawSettings struct {
+		MasterPublicKey     string      `json:"master_public_key"`
+		MasterPrivateKey    string      `json:"master_private_key"`
+		AEAD                string      `json:"aead"`
+		AEADMethod          string      `json:"aead_method"`
+		AEADMethodK         string      `json:"aead-method"`
+		ASCII               string      `json:"ascii"`
+		TableType           string      `json:"table_type"`
+		TableTypeK          string      `json:"table-type"`
+		PaddingMin          int         `json:"padding_min"`
+		PaddingMinK         int         `json:"padding-min"`
+		PaddingMax          int         `json:"padding_max"`
+		PaddingMaxK         int         `json:"padding-max"`
+		EnablePureDownlink  *bool       `json:"enable_pure_downlink"`
+		EnablePureDownlinkK *bool       `json:"enable-pure-downlink"`
+		Multiplex           string      `json:"multiplex"`
+		FallbackAddress     string      `json:"fallback_address"`
+		SuspiciousAction    string      `json:"suspicious_action"`
+		CustomTable         string      `json:"custom_table"`
+		CustomTableK        string      `json:"custom-table"`
+		CustomTables        interface{} `json:"custom_tables"`
+		CustomTablesK       interface{} `json:"custom-tables"`
+		HTTPMask            rawHTTPMask `json:"httpmask"`
+	}
+
+	var raw rawSettings
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	s.MasterPublicKey = strings.TrimSpace(raw.MasterPublicKey)
+	s.MasterPrivateKey = strings.TrimSpace(raw.MasterPrivateKey)
+	s.AEAD = firstNonEmpty(raw.AEADMethod, raw.AEADMethodK, raw.AEAD)
+	s.AEADMethod = s.AEAD
+	s.ASCII = firstNonEmpty(raw.TableType, raw.TableTypeK, raw.ASCII)
+	s.TableType = s.ASCII
+	s.PaddingMin = firstNonZero(raw.PaddingMin, raw.PaddingMinK)
+	s.PaddingMax = firstNonZero(raw.PaddingMax, raw.PaddingMaxK)
+	s.EnablePureDownlink = raw.EnablePureDownlink
+	if s.EnablePureDownlink == nil {
+		s.EnablePureDownlink = raw.EnablePureDownlinkK
+	}
+	s.Multiplex = strings.TrimSpace(raw.Multiplex)
+	s.FallbackAddress = strings.TrimSpace(raw.FallbackAddress)
+	s.SuspiciousAction = strings.TrimSpace(raw.SuspiciousAction)
+	s.CustomTable = firstNonEmpty(raw.CustomTable, raw.CustomTableK)
+	s.CustomTables = firstNonEmptyStringSlice(raw.CustomTables, raw.CustomTablesK)
+	s.HTTPMask.Disable = raw.HTTPMask.Disable
+	s.HTTPMask.Mode = strings.TrimSpace(raw.HTTPMask.Mode)
+	s.HTTPMask.TLS = raw.HTTPMask.TLS
+	s.HTTPMask.MaskHost = firstNonEmpty(raw.HTTPMask.MaskHost, raw.HTTPMask.MaskHostK, raw.HTTPMask.Host)
+	s.HTTPMask.Host = s.HTTPMask.MaskHost
+	s.HTTPMask.PathRoot = firstNonEmpty(raw.HTTPMask.PathRoot, raw.HTTPMask.PathRootK)
+	s.HTTPMask.Multiplex = strings.TrimSpace(raw.HTTPMask.Multiplex)
+	return nil
 }
 
 type UserInfo struct {
@@ -359,4 +431,70 @@ func shortResponseBody(body []byte) string {
 		return text[:256]
 	}
 	return text
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func firstNonZero(values ...int) int {
+	for _, value := range values {
+		if value != 0 {
+			return value
+		}
+	}
+	return 0
+}
+
+func firstNonEmptyStringSlice(values ...interface{}) []string {
+	for _, value := range values {
+		out := toStringSlice(value)
+		if len(out) > 0 {
+			return out
+		}
+	}
+	return nil
+}
+
+func toStringSlice(value interface{}) []string {
+	switch v := value.(type) {
+	case []string:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			item = strings.TrimSpace(item)
+			if item != "" {
+				out = append(out, item)
+			}
+		}
+		return out
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			text := strings.TrimSpace(fmt.Sprint(item))
+			if text != "" {
+				out = append(out, text)
+			}
+		}
+		return out
+	case string:
+		parts := strings.FieldsFunc(v, func(r rune) bool {
+			return r == ',' || r == '\n' || r == '\r' || r == '\t' || r == ' '
+		})
+		out := make([]string, 0, len(parts))
+		for _, item := range parts {
+			item = strings.TrimSpace(item)
+			if item != "" {
+				out = append(out, item)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
 }

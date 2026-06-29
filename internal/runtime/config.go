@@ -36,7 +36,7 @@ func buildSudokuConfig(node *panel.NodeInfo, cfg conf.RuntimeConfig) (*sudokucon
 
 	httpMask := sudokuconfig.HTTPMaskConfig{
 		Mode:      firstNonEmpty(settings.HTTPMask.Mode, "legacy"),
-		Host:      settings.HTTPMask.Host,
+		Host:      firstNonEmpty(settings.HTTPMask.MaskHost, settings.HTTPMask.Host),
 		PathRoot:  settings.HTTPMask.PathRoot,
 		Multiplex: firstNonEmpty(settings.HTTPMask.Multiplex, settings.Multiplex),
 	}
@@ -64,11 +64,11 @@ func buildSudokuConfig(node *panel.NodeInfo, cfg conf.RuntimeConfig) (*sudokucon
 		LocalPort:          node.ServerPort,
 		FallbackAddr:       fallback,
 		Key:                key,
-		AEAD:               firstNonEmpty(settings.AEAD, "chacha20-poly1305"),
+		AEAD:               firstNonEmpty(settings.AEADMethod, settings.AEAD, "chacha20-poly1305"),
 		SuspiciousAction:   suspiciousAction,
 		PaddingMin:         firstNonZero(settings.PaddingMin, 5),
 		PaddingMax:         firstNonZero(settings.PaddingMax, 15),
-		ASCII:              firstNonEmpty(settings.ASCII, "prefer_entropy"),
+		ASCII:              firstNonEmpty(settings.TableType, settings.ASCII, "prefer_entropy"),
 		CustomTable:        settings.CustomTable,
 		CustomTables:       append([]string(nil), settings.CustomTables...),
 		EnablePureDownlink: enablePureDownlink,

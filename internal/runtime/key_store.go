@@ -54,7 +54,7 @@ func (s *ClientKeyStore) BuildMappings(node *panel.NodeInfo, users []panel.UserI
 		if key == "" {
 			continue
 		}
-		userHash := userHashHex([]byte(key))
+		userHash := userHashHex(key)
 		out = append(out, UserKey{
 			UID:      user.Id,
 			UUID:     user.Uuid,
@@ -213,7 +213,12 @@ func deterministicUserKey(seed string, node *panel.NodeInfo, user panel.UserInfo
 	return hex.EncodeToString(sum[:])
 }
 
-func userHashHex(privateKey []byte) string {
-	sum := sha256.Sum256(privateKey)
+func userHashHex(key string) string {
+	key = strings.TrimSpace(key)
+	raw, err := hex.DecodeString(key)
+	if err != nil || len(raw) == 0 {
+		raw = []byte(key)
+	}
+	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:8])
 }

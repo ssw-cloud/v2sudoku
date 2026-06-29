@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"testing"
@@ -140,5 +141,18 @@ func TestDeterministicSplitKeyRecoversMasterPublicKey(t *testing.T) {
 	}
 	if sudokucrypto.EncodePoint(pub) != sudokucrypto.EncodePoint(pair.Public) {
 		t.Fatalf("split key does not recover master public key")
+	}
+}
+
+func TestUserHashUsesDecodedHexKeyBytes(t *testing.T) {
+	keyHex := "00112233445566778899aabbccddeeff"
+	raw, err := hex.DecodeString(keyHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(raw)
+	want := hex.EncodeToString(sum[:8])
+	if got := userHashHex(keyHex); got != want {
+		t.Fatalf("userHashHex = %q, want %q", got, want)
 	}
 }

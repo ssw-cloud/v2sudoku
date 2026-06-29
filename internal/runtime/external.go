@@ -213,6 +213,12 @@ func (e *External) rebuildUserHashesLocked() error {
 	for _, key := range keys {
 		e.userHashToUUID[key.UserHash] = key.UUID
 	}
+	log.WithFields(log.Fields{
+		"node_id":           e.node.Id,
+		"client_key_source": normalizedClientKeySource(e.runtime.ClientKeySource),
+		"users":             len(e.users),
+		"user_hashes":       len(e.userHashToUUID),
+	}).Info("rebuilt sudoku user hash mappings")
 	return nil
 }
 
@@ -267,9 +273,11 @@ func (e *External) startLocked() error {
 		e.mu.Unlock()
 	}()
 	log.WithFields(log.Fields{
-		"node_id": e.node.Id,
-		"path":    e.runtime.SudokuPath,
-		"config":  e.configPath,
+		"node_id":           e.node.Id,
+		"path":              e.runtime.SudokuPath,
+		"config":            e.configPath,
+		"client_key_source": normalizedClientKeySource(e.runtime.ClientKeySource),
+		"user_hashes":       len(e.userHashToUUID),
 	}).Info("external sudoku runtime started")
 	return nil
 }

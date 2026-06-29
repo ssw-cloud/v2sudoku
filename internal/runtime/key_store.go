@@ -37,10 +37,7 @@ func (s *ClientKeyStore) BuildMappings(node *panel.NodeInfo, users []panel.UserI
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	source := strings.ToLower(strings.TrimSpace(s.cfg.ClientKeySource))
-	if source == "" {
-		source = "uuid"
-	}
+	source := normalizedClientKeySource(s.cfg.ClientKeySource)
 	if source == "auto" || source == "file" {
 		if err := s.loadFileLocked(); err != nil {
 			return nil, err
@@ -81,6 +78,14 @@ func (s *ClientKeyStore) BuildMappings(node *panel.NodeInfo, users []panel.UserI
 		}
 	}
 	return out, nil
+}
+
+func normalizedClientKeySource(source string) string {
+	source = strings.ToLower(strings.TrimSpace(source))
+	if source == "" {
+		return conf.DefaultClientKeySource
+	}
+	return source
 }
 
 func (s *ClientKeyStore) resolveKeyLocked(node *panel.NodeInfo, user panel.UserInfo, source string) (string, error) {

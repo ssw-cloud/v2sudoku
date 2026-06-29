@@ -59,6 +59,34 @@ Sudoku clients need a client `key`.
 
 The official Sudoku server validates by master public key, not by a revocable per-user list. If one user's split key leaks, removing the user from v2board stops accounting/online reporting for that hash, but the stock protocol can only fully revoke access by rotating the master key.
 
+## Troubleshooting
+
+`reject sudoku connection with unknown user hash` means the TCP connection and Sudoku handshake reached the node, but the client key does not match any user key currently loaded from v2board.
+
+Check these first:
+
+```bash
+grep -n "ClientKeySource" /etc/v2sudoku/config.yml
+```
+
+The recommended v2board integration should use:
+
+```yaml
+Runtime:
+  ClientKeySource: deterministic_split
+```
+
+Then restart and confirm the node built user hash mappings:
+
+```bash
+systemctl restart v2sudoku
+journalctl -u v2sudoku -n 100 --no-pager | grep -E "rebuilt sudoku user hash mappings|embedded sudoku listener started|unknown user hash"
+```
+
+If `users` or `user_hashes` is `0`, v2board did not return that user to the node. Check the user's status, expiry, traffic balance, group access, and that the node id in `/etc/v2sudoku/config.yml` matches the Sudoku node id in v2board.
+
+If mappings exist but the same hash is still unknown, refresh or re-import the client subscription after saving the Sudoku node. A changed `master_private_key`, node id, or user id changes the derived client key.
+
 ## Build
 
 ```bash

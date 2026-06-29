@@ -86,8 +86,10 @@ func (e *Embedded) Start() error {
 	e.wg.Add(1)
 	go e.acceptLoop()
 	log.WithFields(log.Fields{
-		"node_id": e.node.Id,
-		"addr":    addr,
+		"node_id":           e.node.Id,
+		"addr":              addr,
+		"client_key_source": normalizedClientKeySource(e.runtime.ClientKeySource),
+		"user_hashes":       len(e.userHashToUUID),
 	}).Info("embedded sudoku listener started")
 	return nil
 }
@@ -529,6 +531,12 @@ func (e *Embedded) rebuildUserHashesLocked() error {
 			e.userHashToUUID[userKey.UserHash] = userKey.UUID
 		}
 	}
+	log.WithFields(log.Fields{
+		"node_id":           e.node.Id,
+		"client_key_source": normalizedClientKeySource(e.runtime.ClientKeySource),
+		"users":             len(e.users),
+		"user_hashes":       len(e.userHashToUUID),
+	}).Info("rebuilt sudoku user hash mappings")
 	return nil
 }
 

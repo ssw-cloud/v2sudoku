@@ -14,6 +14,8 @@ const DefaultNodeTimeout = 15
 const (
 	EngineEmbedded = "embedded"
 	EngineExternal = "external"
+
+	DefaultClientKeySource = "deterministic_split"
 )
 
 type Conf struct {
@@ -69,7 +71,7 @@ func New() *Conf {
 			WorkingDir:            "/var/lib/v2sudoku",
 			SudokuPath:            "/opt/v2sudoku/sudoku",
 			FallbackAddress:       "127.0.0.1:80",
-			ClientKeySource:       "deterministic_split",
+			ClientKeySource:       DefaultClientKeySource,
 			ClientKeyFile:         "/var/lib/v2sudoku/client-keys.json",
 			MaxClientKeyFileUsers: 10000,
 		},
@@ -126,7 +128,7 @@ func (c *RuntimeConfig) normalize() {
 		c.FallbackAddress = "127.0.0.1:80"
 	}
 	if c.ClientKeySource == "" {
-		c.ClientKeySource = "uuid"
+		c.ClientKeySource = DefaultClientKeySource
 	}
 	if c.ClientKeyFile == "" {
 		c.ClientKeyFile = "/var/lib/v2sudoku/client-keys.json"

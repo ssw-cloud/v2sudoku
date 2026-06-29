@@ -1,0 +1,26 @@
+Log:
+  Level: info
+  Output: /var/log/v2sudoku/v2sudoku.log
+
+Runtime:
+  # embedded runs the Sudoku protocol in this process and supports per-user traffic accounting.
+  # external writes a server.config.json and launches Runtime.SudokuPath, but only patched
+  # runtimes can emit user traffic events.
+  Engine: embedded
+  WorkingDir: /var/lib/v2sudoku
+  SudokuPath: /opt/v2sudoku/sudoku
+  FallbackAddress: 127.0.0.1:80
+
+  # deterministic_split derives a real Sudoku split private key from the panel's
+  # encryption_settings.master_private_key + node/user data. This is the recommended mode.
+  # uuid/deterministic are only useful for non-official raw API clients and tests.
+  # auto requires the panel to expose encryption_settings.master_private_key, generates
+  # real Sudoku split private keys, and stores them in ClientKeyFile.
+  ClientKeySource: deterministic_split
+  ClientKeySeed: change-me
+  ClientKeyFile: /var/lib/v2sudoku/client-keys.json
+
+Nodes:
+  - ApiHost: https://panel.example.com
+    NodeID: 1
+    ApiKey: your-v2board-server-token

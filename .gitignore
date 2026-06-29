@@ -1,0 +1,6 @@
+v2sudoku
+dist/
+*.log
+*.tmp
+.DS_Store
+

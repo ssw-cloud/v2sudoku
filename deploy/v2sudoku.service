@@ -1,0 +1,16 @@
+[Unit]
+Description=v2sudoku service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/v2sudoku
+ExecStart=/opt/v2sudoku/v2sudoku -config /etc/v2sudoku/config.yml
+Restart=always
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+
